@@ -1,0 +1,15 @@
+# Swift / SPM
+src/.build/
+.build/
+.swiftpm/
+*.xcodeproj
+*.xcuserstate
+DerivedData/
+
+# macOS
+.DS_Store
+
+# Built app + local config backups
+*.app
+~/.claude/settings.json.notchi-backup-*
+settings.json.notchi-backup-*
