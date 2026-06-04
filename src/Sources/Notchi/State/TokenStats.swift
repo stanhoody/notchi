@@ -54,13 +54,52 @@ public struct TokenStats: Sendable {
         guard let data = try? handle.readToEnd(), let text = String(data: data, encoding: .utf8) else {
             return stats
         }
+        accumulate(text, into: &stats)
+        return stats
+    }
 
+    public enum Window: Sendable { case today, fiveHour }
+
+    /// Sum tokens across ALL session transcripts touched within the window (best-effort: filters
+    /// files by modification time, sums their usage). Approximate but honest — shows "—" when no
+    /// usage is recorded. Run off the main thread; tails each file to stay cheap.
+    public static func aggregate(window: Window,
+                                 configDir: URL = HookInstaller.defaultConfigDir()) -> TokenStats {
+        var stats = TokenStats()
+        let cutoff: Date = window == .today
+            ? Calendar.current.startOfDay(for: Date())
+            : Date().addingTimeInterval(-5 * 3600)
+        let projects = configDir.appendingPathComponent("projects", isDirectory: true)
+        let fm = FileManager.default
+        guard let dirs = try? fm.contentsOfDirectory(at: projects, includingPropertiesForKeys: nil) else {
+            return stats
+        }
+        for dir in dirs {
+            guard let files = try? fm.contentsOfDirectory(at: dir,
+                                  includingPropertiesForKeys: [.contentModificationDateKey]) else { continue }
+            for f in files where f.pathExtension == "jsonl" {
+                let mod = (try? f.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+                guard let mod, mod >= cutoff else { continue }
+                guard let h = try? FileHandle(forReadingFrom: f) else { continue }
+                defer { try? h.close() }
+                let end = (try? h.seekToEnd()) ?? 0
+                let win: UInt64 = 1_000_000
+                try? h.seek(toOffset: end > win ? end - win : 0)
+                if let d = try? h.readToEnd(), let t = String(data: d, encoding: .utf8) {
+                    accumulate(t, into: &stats)
+                }
+            }
+        }
+        return stats
+    }
+
+    /// Parse newline JSON, summing usage and capturing the model.
+    private static func accumulate(_ text: String, into stats: inout TokenStats) {
         for line in text.split(separator: "\n") {
             guard let d = line.data(using: .utf8),
                   let obj = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { continue }
             let message = obj["message"] as? [String: Any]
             if let m = (obj["model"] as? String) ?? (message?["model"] as? String) { stats.model = m }
-            // usage may live at top level or under "message".
             let usage = (obj["usage"] as? [String: Any]) ?? (message?["usage"] as? [String: Any])
             if let u = usage {
                 stats.input     = add(stats.input, u["input_tokens"] as? Int)
@@ -69,7 +108,6 @@ public struct TokenStats: Sendable {
                 stats.cacheWrite = add(stats.cacheWrite, u["cache_creation_input_tokens"] as? Int)
             }
         }
-        return stats
     }
 
     private static func add(_ a: Int?, _ b: Int?) -> Int? {

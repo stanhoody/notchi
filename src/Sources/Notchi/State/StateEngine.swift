@@ -160,8 +160,11 @@ public actor StateEngine {
         case .sessionEvictionCheck:
             applyEvictionCheck()
 
-        case .appWillSleep, .appDidWake:
-            break   // Phase 6 reconciliation
+        case .appWillSleep:
+            break   // nothing to pause — TimelineViews idle on their own
+        case .appDidWake:
+            // After sleep, a session that was mid-tool may be stale; reconcile + drop the dead.
+            applyEvictionCheck()
         }
     }
 
@@ -206,18 +209,27 @@ public actor StateEngine {
     private func applyEvictionCheck() {
         let now = Date()
         let cutoff: TimeInterval = 30 * 60
-        let permCutoff: TimeInterval = 60   // a gate nobody answered → revert (backstop to the EOF path)
+        let permCutoff: TimeInterval = 60    // a gate nobody answered → revert (backstop to the EOF path)
+        let stuckCutoff: TimeInterval = 5 * 60   // working/thinking with no events (sleep / crashed Claude) → idle
         var changed = false
         for (sid, sdata) in sessions {
+            let idle = now.timeIntervalSince(sdata.lastActivity)
             switch sdata.state {
-            case .idleWaiting where now.timeIntervalSince(sdata.lastActivity) > cutoff:
+            case .idleWaiting where idle > cutoff:
                 sessions.removeValue(forKey: sid)
                 changed = true
-            case .waitingPermission(let req) where now.timeIntervalSince(sdata.lastActivity) > permCutoff:
+            case .waitingPermission(let req) where idle > permCutoff:
                 pendingPermissions.removeValue(forKey: req.id)
                 var s = sdata; s.state = .idleWaiting; s.needsAttention = false
                 sessions[sid] = s
                 changed = true
+            case .working, .thinking, .celebrating, .confused:
+                if idle > stuckCutoff {
+                    var s = sdata
+                    s.state = .idleWaiting; s.workingSince = nil; s.subAgentCount = 0; s.needsAttention = false
+                    sessions[sid] = s
+                    changed = true
+                }
             default:
                 break
             }

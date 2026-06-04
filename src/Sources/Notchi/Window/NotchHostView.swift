@@ -11,6 +11,11 @@ struct IslandView: View {
     var onDeny: (PermissionRequest) -> Void = { _ in }
     var onFocusTerminal: (SessionID) -> Void = { _ in }
 
+    @State private var tokenMode: TokenMode = .session
+    enum TokenMode: CaseIterable { case session, today, fiveHour
+        var label: String { switch self { case .session: return "Session"; case .today: return "Today"; case .fiveHour: return "5h" } }
+    }
+
     private let notchWidth: CGFloat
     init(model: StateBridge, settings: SettingsStore, notchWidth: CGFloat,
          onSelect: @escaping (SessionID) -> Void = { _ in },
@@ -190,10 +195,18 @@ struct IslandView: View {
     }
 
     private func detailsContent(_ s: SessionData) -> some View {
-        let stats = model.tokensFor(s)
+        let session = model.tokensFor(s)
+        let chosen: TokenStats? = {
+            switch tokenMode {
+            case .session:  return session
+            case .today:    return model.todayStats
+            case .fiveHour: return model.fiveHourStats
+            }
+        }()
+        let accent = Color(red: 0xC6/255, green: 0xFF/255, blue: 0x00/255)
         return VStack(alignment: .leading, spacing: 6) {
             // Session ("chat") name, prominent.
-            Text(stats?.title ?? s.projectName)
+            Text(session?.title ?? s.projectName)
                 .font(.system(size: 14, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
                 .lineLimit(1).truncationMode(.tail)
@@ -201,8 +214,22 @@ struct IslandView: View {
                 .font(.system(size: 11)).foregroundColor(.white.opacity(0.5))
                 .lineLimit(1).truncationMode(.middle)
             detailRow("Activity", "\(s.toolCount) tool\(s.toolCount == 1 ? "" : "s")")
-            detailRow("Model", stats?.model.map(prettyModel) ?? (s.model.isEmpty ? "—" : s.model))
-            detailRow("Tokens", tokensText(stats))
+            detailRow("Model", session?.model.map(prettyModel) ?? (s.model.isEmpty ? "—" : s.model))
+            // token window picker
+            HStack(spacing: 5) {
+                ForEach(TokenMode.allCases, id: \.self) { m in
+                    Text(m.label)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(tokenMode == m ? .black : .white.opacity(0.7))
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(RoundedRectangle(cornerRadius: 5)
+                            .fill(tokenMode == m ? accent : Color.white.opacity(0.12)))
+                        .contentShape(Rectangle())
+                        .onTapGesture { tokenMode = m }
+                }
+            }
+            detailRow("Tokens", tokensText(chosen))
+            detailRow("Cost", dollarsText(chosen))
             darkPill("Open in Claude Code", filled: true) { onFocusTerminal(s.id) }
                 .padding(.top, 2)
         }
@@ -265,6 +292,11 @@ struct IslandView: View {
         func k(_ n: Int?) -> String { guard let n else { return "0" }; return n >= 1000 ? "\(n/1000)k" : "\(n)" }
         return "\(k(t.input)) in · \(k(t.output)) out"
     }
+
+    private func dollarsText(_ t: TokenStats?) -> String {
+        guard let d = t?.dollars(pricing: ModelPrice.table) else { return "—" }
+        return d < 0.01 ? "<$0.01" : String(format: "$%.2f", d)
+    }
 }
 
 /// Bridges the StateEngine actor into SwiftUI, plus island UI state (click selection, notch height,
@@ -276,6 +308,10 @@ final class StateBridge: ObservableObject {
     @Published var notchHeight: CGFloat = 32
 
     private var tokenCache: [SessionID: TokenStats] = [:]
+    /// Cross-session aggregates for the today / 5h token modes (computed lazily on popup open).
+    private(set) var todayStats: TokenStats?
+    private(set) var fiveHourStats: TokenStats?
+    private var aggregatesAt: Date = .distantPast
     private let engine: StateEngine
     private var streamTask: Task<Void, Never>?
 
@@ -305,4 +341,11 @@ final class StateBridge: ObservableObject {
         objectWillChange.send()   // tokenCache isn't @Published; nudge the view to re-read
     }
     func tokensFor(_ s: SessionData) -> TokenStats? { tokenCache[s.id] }
+
+    func cacheAggregates(today: TokenStats, fiveHour: TokenStats) {
+        todayStats = today; fiveHourStats = fiveHour; aggregatesAt = Date()
+        objectWillChange.send()
+    }
+    /// True if today/5h aggregates are missing or older than 20s (cheap debounce).
+    var aggregatesStale: Bool { Date().timeIntervalSince(aggregatesAt) > 20 }
 }

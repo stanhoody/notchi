@@ -16,11 +16,7 @@ let package = Package(
             resources: [
                 .process("Resources")
             ]
-        ),
-        .testTarget(
-            name: "NotchiTests",
-            dependencies: ["Notchi"],
-            path: "Tests/NotchiTests"
         )
+        // Tests run via `notchi --selftest` (no Xcode/XCTest on the build box).
     ]
 )

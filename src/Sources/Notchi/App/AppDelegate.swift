@@ -60,6 +60,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         evictionTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [engine] _ in
             Task { await engine.apply(.sessionEvictionCheck) }
         }
+        let ws = NSWorkspace.shared.notificationCenter
+        ws.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [engine] _ in
+            Task { await engine.apply(.appWillSleep) }
+        }
+        ws.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [engine] _ in
+            Task { await engine.apply(.appDidWake) }
+        }
     }
 
     private func startHookBridge() {
@@ -92,11 +99,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         stateBridge.expandedSessionID = sid
         guard let session = stateBridge.sessions.first(where: { $0.id == sid }) else { return }
-        // Avoid re-reading the transcript on rapid expand/collapse — read once per session.
-        if stateBridge.tokensFor(session) != nil { return }
+        // today/5h aggregates: recompute at most every 20s.
+        let needAgg = stateBridge.aggregatesStale
+        // Avoid re-reading the session transcript on rapid expand/collapse — read once per session.
+        let needSession = stateBridge.tokensFor(session) == nil
+        guard needAgg || needSession else { return }
         DispatchQueue.global(qos: .userInitiated).async {
-            let stats = TokenStats.read(cwd: session.cwd, sessionID: session.id)
-            DispatchQueue.main.async { [weak self] in self?.stateBridge.cacheTokens(stats, for: sid) }
+            let stats = needSession ? TokenStats.read(cwd: session.cwd, sessionID: session.id) : nil
+            let today = needAgg ? TokenStats.aggregate(window: .today) : nil
+            let five = needAgg ? TokenStats.aggregate(window: .fiveHour) : nil
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                if let stats { self.stateBridge.cacheTokens(stats, for: sid) }
+                if let today, let five { self.stateBridge.cacheAggregates(today: today, fiveHour: five) }
+            }
         }
     }
 
@@ -196,7 +212,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         playSoundsIfNeeded(stateBridge.sessions)
         let placement = screenWatcher.placement
         hookBridge?.setIslandVisible(placement.visible)
-        guard placement.visible else { window.orderOut(nil); return }
+        guard placement.visible else {
+            log("island HIDDEN: placement not visible (no notch screen / fullscreen / clamshell). screen=\(placement.screen?.localizedName ?? "none")")
+            window.orderOut(nil); return
+        }
 
         let notch = placement.frame
         if stateBridge.notchHeight != notch.height { stateBridge.notchHeight = notch.height }
@@ -210,7 +229,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         guard IslandLayout.isVisible(sessionCount: sessions.count, expansion: expansion) else {
-            window.orderOut(nil); return
+            window.orderOut(nil); return   // nothing happening → hidden by design
         }
 
         let hasSub = sessions.prefix(6).contains { $0.subAgentCount > 0 }
@@ -222,6 +241,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                            width: size.width, height: size.height)
         window.setFrame(frame, display: true)
         window.orderFrontRegardless()
+        log("island SHOWN \(Int(size.width))x\(Int(size.height)) at (\(Int(frame.minX)),\(Int(frame.minY))) sessions=\(sessions.count) screen=\(placement.screen?.localizedName ?? "?") notch=\(Int(notch.width))x\(Int(notch.height))")
     }
 
     // MARK: - Settings hot-reload

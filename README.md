@@ -6,6 +6,12 @@ When a Claude Code session is running, a little creature appears beside the came
 
 Fully local. No network, no telemetry, no accounts.
 
+<p align="center">
+  <img src="assets-preview/claude/gif/work-edit.gif" width="180" alt="Notchi typing">
+  <img src="assets-preview/claude/gif/planning.gif" width="180" alt="Notchi planning">
+  <img src="assets-preview/claude/gif/attention.gif" width="180" alt="Notchi waving">
+</p>
+
 ## What it shows
 
 | Claude Code is… | Notchi |
@@ -31,12 +37,16 @@ The notch itself expands into a black "island" (Dynamic-Island style) to host th
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) installed
 - Swift toolchain (Xcode or Command Line Tools) to build
 
-## Build & run
+## Install
+
+**Prebuilt:** grab `Notchi.app.zip` from [Releases](https://github.com/stanhoody/notchi/releases), unzip to `~/Applications`, and open it. The app is ad-hoc signed (not notarized), so the first time macOS will block it — **right-click → Open** (or run `xattr -dr com.apple.quarantine ~/Applications/Notchi.app`).
+
+**From source:**
 
 ```bash
 cd src
 swift build -c release
-./scripts/package.sh        # builds Notchi.app into ~/Applications
+./scripts/package.sh        # builds + ad-hoc signs Notchi.app into ~/Applications
 open ~/Applications/Notchi.app
 ```
 
@@ -49,9 +59,23 @@ Then click the Notchi icon in the menu bar → **Install Claude Code hooks**. Op
 - **Observational by default:** Notchi only interrupts when Claude actually pings you (its `Notification`). It does not gate your tools. An optional "Confirm every non-allowlisted tool" toggle turns on true in-notch Approve/Deny for power users.
 - Uninstall any time from the menu bar, or `notchi --uninstall-hooks`.
 
+## Characters
+
+Nine selectable characters, each with its own palette — **a different one per session by default** (so parallel sessions are easy to tell apart), or lock one in settings:
+
+**Claude** · **Skull** · **Dog** · **Robot** · **Space Cat** · **Invader** · **Cactus** · **Flower** · **Jobs**
+
+<p align="center">
+  <img src="assets-preview/claude/_contact.png" width="240" alt="Claude">
+  <img src="assets-preview/invader/_contact.png" width="240" alt="Invader">
+  <img src="assets-preview/flower/_contact.png" width="240" alt="Flower">
+</p>
+
+Run `notchi --export-assets DIR` to dump every character × state as GIFs and sprite strips.
+
 ## Settings (menu bar)
 
-Character skin (Blob / Kitty / Bot), accent color, animation speed, opacity, hide-in-fullscreen, hide-on-video-calls, optional sound, launch-at-login, and the permission-gate toggle.
+Character (or random-per-session), accent color, animation speed, opacity, hide-in-fullscreen, hide-on-video-calls, optional sound, launch-at-login, and the permission-gate toggle.
 
 ## Privacy
 

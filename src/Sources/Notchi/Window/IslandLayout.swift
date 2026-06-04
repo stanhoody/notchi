@@ -30,7 +30,7 @@ public enum IslandLayout {
             case .none:        return 0
             case .permission:  return 156
             case .attention:   return 100
-            case .details:     return 196
+            case .details:     return 234
             }
         }
         var isExpanded: Bool { if case .none = self { return false }; return true }
