@@ -38,13 +38,13 @@ public enum CreatureSkin: String, Sendable, CaseIterable {
         switch self {
         case .claude:   return "#B97A56"   // warm tan (the Claude terminal pet)
         case .skull:    return "#E6E2D3"   // bone
-        case .dog:      return "#A56A3A"   // brown
+        case .dog:      return "#B5793E"   // brown, lifted so it clears black
         case .robot:    return "#A2ABB3"   // steel
-        case .spacecat: return "#A06CE0"   // purple
+        case .spacecat: return "#9B7ED8"   // cooler purple (distinct from invader, lifts on black)
         case .invader:  return "#5BE06B"   // alien green
         case .cactus:   return "#4E9A4E"   // cactus green
         case .flower:   return "#F2C24B"   // flower center (yellow)
-        case .jobs:     return "#4A4A4A"   // grey turtleneck
+        case .jobs:     return "#3A3A3A"   // turtleneck — lighter so the auto-shadow clears the void
         }
     }
 
@@ -161,67 +161,67 @@ public struct SpriteCompositor {
 
     // CLAUDE — the boxy tan terminal pet: rectangular body, square eyes, three stubby legs.
     private static let claudeBody: [String] = [
+        "...OOOOOOOO...",
         "..OOOOOOOOOO..",
         ".OOOOOOOOOOOO.",
+        ".OOOOOOOOOOOO.",   // eyes (row 3), wide-set
         "OOOOOOOOOOOOOO",
-        "OOOOOOOOOOOOhO",
-        "OOOOOOOOOOOxxO",
-        "OOOOOOOOOOxxxO",
-        "OOOOOOOOOxxxxO",
+        "OOOOOOOOOOOOOO",
         ".OOOOOOOOOOOO.",
-        "..OO..OO..OO..",
-        "..OO..OO..OO..",
+        "..OOOOOOOOOO..",
+        "...OOOOOOOO...",
+        "...OO....OO...",   // two stubby feet (not six)
     ]
     // SKULL — bone dome, hollow sockets, teeth.
     private static let skullBody: [String] = [
         "...OOOOOOOO...",
         "..OOOOOOOOOO..",
-        ".OOOOOOOOOOOO.",
+        ".OOOOOOOOOOOO.",   // sockets (eyeSpec row 2)
         ".OOOOOOOOOOOO.",
         ".OOOOOOOOOOOO.",
         "..OOOOOOOOOO..",
-        "..OOOOOOOOOO..",
-        "..O.OO..OO.O..",
+        "...OOOOOOOO...",   // jaw narrows
+        "..O.OO..OO.O..",   // even teeth (bright edge)
         "...OO.OO.OO...",
     ]
     // DOG — ears up top, snout + dark nose.
     private static let dogBody: [String] = [
-        "OO..........OO",
+        "OO..........OO",   // ears break the top
         "OOO........OOO",
         ".OOOOOOOOOOOO.",
+        "OOOOOOOOOOOOOO",   // eyes (row 3), forward-set
         "OOOOOOOOOOOOOO",
-        "OOOOOOOOOOOOOO",
-        "OOOOOhhhhOOOOO",
-        "OOOOhheehhOOOO",
-        "OOOOOhhhhOOOOO",
-        ".OOOOOOOOOOOx.",
-        "..OO..OO..OO..",
+        "OOOOOhhhhOOOOO",   // muzzle (light)
+        "OOOOhxxxhOOOO.",   // dark nose (x) at muzzle top-center
+        ".OOOOhhhhOOOx.",
+        "...hhhhhhhh...",   // muzzle breaks the bottom edge
+        "....OO..OO....",
     ]
     // ROBOT — square head, antenna, grille mouth, peg legs.
     private static let robotBody: [String] = [
-        "......*.......",
+        "......*.......",   // antenna ball (accent / status light)
         "......O.......",
+        "OOOOOOOOOOOOOO",   // hard square corners
+        "OOOOOOOOOOOOOO",   // eyes (row 3) — visor slits
         "OOOOOOOOOOOOOO",
+        "OOOhhhhhhhhOOO",   // grille mouth
+        "OOOOOOxxxxOOOO",   // panel seam (internal shadow)
         "OOOOOOOOOOOOOO",
-        "OOOOOOOOOOOOOO",
-        "OOOhhhhhhhhOOO",
-        "OOOOOOOOOOOxxO",
-        "OOOOOOOOOOxxxO",
-        ".OO......OO...",
+        ".OO......OO...",   // peg legs (boxy)
         ".OO......OO...",
     ]
     // SPACE CAT — pointy ears, sparkle cheeks.
     private static let spacecatBody: [String] = [
+        "OOO........OOO",   // bold triangle ears at the extreme corners
         ".OO........OO.",
-        ".OOO......OOO.",
         "..OOOOOOOOOO..",
+        ".OOOOOOOOOOOO.",   // eyes (row 3), wide almond
+        "OOOOOOOOOOOOOO",
+        "OOOOOOOOOOOOOO",
         ".OOOOOOOOOOOO.",
-        "OOOOOOOOOOOOOO",
-        "OOOO*OOOO*OOOO",
-        "OOOOOOOOOOOOOO",
-        ".OOOOOOOOOOxx.",
-        "..OOOOOOOOOO..",
-        "...OO....OO...",
+        "..OOOOOOOOOO..",   // face tapers to a chin
+        "...OOOOOOOO...",
+        "....OO..OO....",
     ]
     // INVADER — classic space-invader silhouette: antennae, notched arms, splayed legs.
     private static let invaderBody: [String] = [
@@ -239,48 +239,48 @@ public struct SpriteCompositor {
 
     // CACTUS — saguaro with two arm-pads, accent bud on top, terracotta pot (h).
     private static let cactusBody: [String] = [
-        "......**......",
+        "......**......",   // accent bud breaks the top
         ".....OOOO.....",
         "....OOOOOO....",
-        "....OOOOOO..OO",
-        "OO..OOOOOO..OO",
-        "OO..OOOOOO..O.",
-        ".O..OOOOOO....",
-        "....OOOOOO....",
+        "...OOOOOOOO...",   // shoulders
+        "OO.OOOOOOOO.OO",   // arms attach here...
+        "OO.OOOOOOOO.OO",
+        "OO.OOOOOOOO.OO",   // ...and run UP the sides (candelabra)
+        "...OOOOOOOO...",
         "....OOOOOO....",
         "...OOOOOOOO...",
-        "...hhhhhhhh...",
+        "...hhhhhhhh...",   // pot rim (light = terracotta)
         "..hhhhhhhhhh..",
     ]
     // FLOWER — petals (accent *), yellow center (O) with the face, green stem/leaves (x), pot (h).
     private static let flowerBody: [String] = [
-        "...*..*..*....",
-        "..*OOOOOOOO*..",
-        "..*OOOOOOOO*..",
-        "..*OOOOOOOO*..",
-        "...*OOOOOO*...",
-        "....*OOOO*....",
+        "...O..O..O....",   // top petal bumps break the edge
+        "..OOOOOOOOOO..",
+        "..OOOOOOOOOO..",   // bloom (eyes give the dark center)
+        "..OOOOOOOOOO..",
+        "...OOOOOOOO...",
+        "....OOOOOO....",
+        ".....xOOx.....",   // 2px stem (x = green)
+        "...xxxOOxxx...",   // angled leaves break the silhouette
         ".....xOOx.....",
-        "...xxxOOxxx...",
         ".....xOOx.....",
-        ".....xOOx.....",
-        "...hhhhhhhh...",
+        "...hhhhhhhh...",   // pot (h = terracotta)
         "..hhhhhhhhhh..",
     ]
     // JOBS — bald skin head (h), dark round glasses (eyes), grey turtleneck (O).
     private static let jobsBody: [String] = [
-        "....hhhhhh....",
+        "....hhhhhh....",   // bald dome (h = skin)
         "...hhhhhhhh...",
         "..hhhhhhhhhh..",
-        "..hhhhhhhhhh..",
+        "..hhhhhhhhhh..",   // glasses sit here (eyeSpec row 3)
         "..hhhhhhhhhh..",
         "...hhhhhhhh...",
-        "....hhhhhh....",
-        "...OOOOOOOO...",
+        "....hhhhhh....",   // chin narrows
+        ".....OOOO.....",   // neck gap → reads as neck, not slab
+        "...OOOOOOOO...",   // collar line
         "..OOOOOOOOOO..",
         "..OOOOOOOOOO..",
-        "..OOOOOOOOOO..",
-        "..OOOOOOOOOO..",
+        "...OOOOOOOO...",   // shoulders taper → sweater, not rectangle
     ]
 
     private static func body(for skin: CreatureSkin) -> [String] {
@@ -300,7 +300,7 @@ public struct SpriteCompositor {
     // eye row within the body grid + columns (left/right eye start), per skin
     private static func eyeSpec(_ skin: CreatureSkin) -> (row: Int, lx: Int, rx: Int) {
         switch skin {
-        case .claude:   return (2, 3, 9)
+        case .claude:   return (3, 3, 9)
         case .skull:    return (2, 3, 9)
         case .dog:      return (3, 2, 9)
         case .robot:    return (3, 2, 9)
